@@ -11,19 +11,8 @@ import {
   getCellsForPlacement,
 } from './shared/gameLogic.js';
 import { GRID_SIZE } from './shared/constants.js';
-import { loadGames, saveGames } from './storage.js';
+import { getGameState, setGameState } from './storage.js';
 
-let games: Record<string, GameState> = {};
-
-export async function initStorage() {
-  games = await loadGames();
-}
-
-async function persist() {
-  await saveGames(games);
-}
-
-/** Returns view of opponent board for a player (only hit/miss/sunk, no ship positions). */
 function getOpponentView(shots: GameState['player1Shots'], fullBoard: Board | null): Board | null {
   if (!fullBoard) return null;
   const view = createEmptyBoard();
@@ -41,7 +30,6 @@ function getOpponentView(shots: GameState['player1Shots'], fullBoard: Board | nu
   return view;
 }
 
-/** Serialize state for a player (hide opponent's ship positions). */
 export function getStateForPlayer(state: GameState, player: PlayerRole): GameState {
   if (player === 'player1') {
     return {
@@ -55,7 +43,7 @@ export function getStateForPlayer(state: GameState, player: PlayerRole): GameSta
   };
 }
 
-export function createGame(mode: GameMode): GameState {
+export async function createGame(mode: GameMode): Promise<GameState> {
   const gameId = uuidv4();
   const now = Date.now();
   const player2ShipsPlaced = mode === 'ai' ? getRandomPlacements() : [];
@@ -77,16 +65,20 @@ export function createGame(mode: GameMode): GameState {
     updatedAt: now,
     movesLog: [],
   };
-  games[gameId] = state;
-  persist();
+  await setGameState(state);
   return state;
 }
 
-export function getGame(gameId: string, player?: PlayerRole): GameState | null {
-  const state = games[gameId];
+export async function getGame(gameId: string, player?: PlayerRole): Promise<GameState | null> {
+  const state = await getGameState(gameId);
   if (!state) return null;
   if (player) return getStateForPlayer(state, player);
   return getStateForPlayer(state, 'player1');
+}
+
+/** Get the full (unfiltered) game state — needed for AI logic and win probability. */
+export async function getFullGame(gameId: string): Promise<GameState | null> {
+  return getGameState(gameId);
 }
 
 function validatePlacements(placements: ShipPlacement[]): boolean {
@@ -108,7 +100,6 @@ function validatePlacements(placements: ShipPlacement[]): boolean {
   return true;
 }
 
-/** Normalize placement from request body (row/col may be strings from JSON). */
 function normalizePlacements(placements: unknown[]): ShipPlacement[] {
   return placements.map((p: unknown) => {
     const x = p as Record<string, unknown>;
@@ -122,16 +113,16 @@ function normalizePlacements(placements: unknown[]): ShipPlacement[] {
   });
 }
 
-export function submitPlacements(
+export async function submitPlacements(
   gameId: string,
   player: PlayerRole,
   placements: ShipPlacement[]
-): GameState | null {
-  const state = games[gameId];
+): Promise<GameState | null> {
+  const state = await getGameState(gameId);
   if (!state || state.phase !== 'placement') return null;
   const normalized = normalizePlacements(placements);
   if (!validatePlacements(normalized)) return null;
-  // Allow either player to place in any order; no need for player1 to place first
+
   if (player === 'player1') {
     state.player1ShipsPlaced = normalized as GameState['player1ShipsPlaced'];
     state.player1Board = applyPlacementsToBoard(normalized);
@@ -141,23 +132,22 @@ export function submitPlacements(
   }
   state.updatedAt = Date.now();
 
-  const bothPlaced =
-    state.player1Board && state.player2Board;
+  const bothPlaced = state.player1Board && state.player2Board;
   if (bothPlaced) {
     state.phase = 'firing';
     state.currentTurn = 'player1';
   }
-  persist();
+  await setGameState(state);
   return state;
 }
 
-export function fire(
+export async function fire(
   gameId: string,
   player: PlayerRole,
   row: number,
   col: number
-): { result: { hit: boolean; sunkShipId?: string; sunkShipName?: string; gameOver?: boolean }; state: GameState } | null {
-  const state = games[gameId];
+): Promise<{ result: { hit: boolean; sunkShipId?: string; sunkShipName?: string; gameOver?: boolean }; state: GameState } | null> {
+  const state = await getGameState(gameId);
   if (!state || state.phase !== 'firing' || state.currentTurn !== player) return null;
   const targetBoard = player === 'player1' ? state.player2Board! : state.player1Board!;
   const shots = player === 'player1' ? state.player1Shots : state.player2Shots;
@@ -179,13 +169,9 @@ export function fire(
     state.completedAt = Date.now();
   }
 
-  persist();
+  await setGameState(state);
   return {
     result: { hit, sunkShipId, sunkShipName, gameOver: !!allSunk },
-    state: state,
+    state,
   };
-}
-
-export function getGamesMap(): Record<string, GameState> {
-  return games;
 }

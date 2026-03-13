@@ -1,34 +1,23 @@
-/**
- * Local file-based persistence for game state.
- * Uses a JSON file so no DB is required; suitable for single-server deployment.
- */
-
-import { readFile, writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import IORedis from 'ioredis';
+const Redis = IORedis.default ?? IORedis;
 import type { GameState } from './shared/types.js';
 
-const DATA_DIR = join(process.cwd(), 'data');
-const GAMES_FILE = join(DATA_DIR, 'games.json');
+const REDIS_URL = process.env.REDIS_URL;
+if (!REDIS_URL) throw new Error('REDIS_URL env var is required');
 
-async function ensureDataDir() {
-  if (!existsSync(DATA_DIR)) {
-    await mkdir(DATA_DIR, { recursive: true });
-  }
+export const redis = new Redis(REDIS_URL);
+
+const GAME_TTL = 60 * 60 * 24; // 24 hours
+
+export async function getGameState(gameId: string): Promise<GameState | null> {
+  const raw = await redis.get(`game:${gameId}`);
+  return raw ? JSON.parse(raw) : null;
 }
 
-export async function loadGames(): Promise<Record<string, GameState>> {
-  await ensureDataDir();
-  if (!existsSync(GAMES_FILE)) return {};
-  const raw = await readFile(GAMES_FILE, 'utf-8');
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return {};
-  }
+export async function setGameState(state: GameState): Promise<void> {
+  await redis.set(`game:${state.gameId}`, JSON.stringify(state), 'EX', GAME_TTL);
 }
 
-export async function saveGames(games: Record<string, GameState>): Promise<void> {
-  await ensureDataDir();
-  await writeFile(GAMES_FILE, JSON.stringify(games, null, 0), 'utf-8');
+export async function deleteGameState(gameId: string): Promise<void> {
+  await redis.del(`game:${gameId}`);
 }
