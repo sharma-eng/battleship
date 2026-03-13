@@ -12,7 +12,9 @@ import {
   getGamesMap,
 } from './gameManager.js';
 import { getAIShot } from './ai.js';
-import type { PlayerRole } from './shared/types.js';
+import type { PlayerRole, AIStrategyId } from './shared/types.js';
+import { runMonteCarloGames } from './simMonteCarlo.js';
+import { getWinProbability } from './winProbability.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -28,6 +30,27 @@ app.post('/api/games', (req, res) => {
   const mode = req.body?.mode === 'multiplayer' ? 'multiplayer' : 'ai';
   const state = createGame(mode);
   res.json({ gameId: state.gameId });
+});
+
+// REST: win probability from current state (Monte Carlo playouts) — must be before generic :gameId
+app.get('/api/games/:gameId/win-probability', (req, res) => {
+  const { gameId } = req.params;
+  const n = Math.min(500, Math.max(50, Number(req.query.n) || 150));
+  try {
+    const full = getGamesMap()[gameId];
+    if (!full) {
+      console.warn('[win-probability] game not found:', gameId);
+      return res.status(404).send('Game not found');
+    }
+    if (full.phase !== 'firing') {
+      return res.json({ player1: 0.5, player2: 0.5 });
+    }
+    const { player1, player2 } = getWinProbability(full, n);
+    res.json({ player1, player2 });
+  } catch (err) {
+    console.error('win-probability error:', err);
+    res.json({ player1: 0.5, player2: 0.5 });
+  }
 });
 
 // REST: get game (player optional; default player1 for backward compat)
@@ -84,6 +107,17 @@ app.post('/api/games/:gameId/fire', (req, res) => {
   broadcastGameUpdated(gameId);
 
   res.json({ ...result, state: getStateForPlayer(state, player) });
+});
+
+// REST: simulation spike – Monte Carlo outcomes for AI vs AI strategies
+app.post('/api/sim/monte-carlo', (req, res) => {
+  const body = req.body ?? {};
+  const games = Number(body.games ?? 500);
+  const p1 = (body.p1Strategy as AIStrategyId) ?? 'parity';
+  const p2 = (body.p2Strategy as AIStrategyId) ?? 'hunt';
+
+  const result = runMonteCarloGames({ games, p1Strategy: p1, p2Strategy: p2 });
+  res.json(result);
 });
 
 function broadcastGameUpdated(gameId: string) {

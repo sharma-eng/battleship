@@ -66,3 +66,41 @@
   font-weight: 600;
   color: var(--text-muted);
 }
+
+.firing__win-prob {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.firing__win-prob-loading {
+  font-style: italic;
+}
+
+.firing__win-prob-you {
+  min-width: 5rem;
+}
+
+.firing__win-prob-bar {
+  flex: 1;
+  max-width: 12rem;
+  height: 0.5rem;
+  background: rgba(101, 119, 134, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.firing__win-prob-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width 0.2s ease;
+}
+
+.firing__win-prob-opp {
+  min-width: 6rem;
+}

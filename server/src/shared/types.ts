@@ -25,6 +25,7 @@ export interface GridCell {
 
 export type Board = GridCell[][];
 export type GameMode = 'ai' | 'multiplayer';
+export type AIStrategyId = 'random' | 'hunt' | 'parity' | 'probability';
 export type GamePhase = 'placement' | 'firing' | 'ended';
 export type PlayerRole = 'player1' | 'player2';
 

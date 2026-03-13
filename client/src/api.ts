@@ -57,3 +57,37 @@ export async function fire(
   if (!res.ok) throw new Error(await res.text().catch(() => 'Invalid shot'));
   return res.json();
 }
+
+export async function getWinProbability(
+  gameId: string,
+  player: 'player1' | 'player2',
+  n?: number
+): Promise<{ player1: number; player2: number }> {
+  const url = new URL(`${API_BASE}/games/${gameId}/win-probability`, window.location.origin);
+  url.searchParams.set('player', player);
+  if (n != null) url.searchParams.set('n', String(n));
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(await res.text().catch(() => 'Win probability failed'));
+  return res.json();
+}
+
+export async function runMonteCarlo(
+  games: number,
+  p1Strategy: 'random' | 'hunt' | 'parity' | 'probability',
+  p2Strategy: 'random' | 'hunt' | 'parity' | 'probability'
+): Promise<{
+  games: number;
+  p1Strategy: string;
+  p2Strategy: string;
+  wins: { player1: number; player2: number; ties: number };
+  averageMoves: number;
+  maxMoves: number;
+}> {
+  const res = await fetch(`${API_BASE}/sim/monte-carlo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ games, p1Strategy, p2Strategy }),
+  });
+  if (!res.ok) throw new Error(await res.text().catch(() => 'Monte Carlo failed'));
+  return res.json();
+}

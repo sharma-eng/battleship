@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { GameState, PlayerRole } from '@shared/types';
-import { fire } from '../api';
+import { fire, getWinProbability } from '../api';
 import { Grid } from './Grid';
 import './FiringPhase.css';
 
@@ -16,8 +16,84 @@ interface FiringPhaseProps {
 export function FiringPhase({ gameId, mode, playerRole, state, onStateChange, onBack }: FiringPhaseProps) {
   const [lastResult, setLastResult] = useState<{ hit: boolean; sunkShipName?: string; gameOver?: boolean } | null>(null);
   const [firing, setFiring] = useState(false);
+  const [winProb, setWinProb] = useState<{ player1: number; player2: number } | null>(null);
+  const [winProbLoading, setWinProbLoading] = useState(false);
+  const fetchGenRef = useRef(0);
 
   const isMyTurn = state.currentTurn === playerRole;
+
+  // Update win probability after every move (and on mount when in firing phase).
+  // Use a generation ref so we only apply the result from the latest fetch, and never ignore a response due to effect re-run.
+  useEffect(() => {
+    if (state.phase === 'ended') {
+      const p1 = state.winner === 'player1' ? 1 : 0;
+      const p2 = state.winner === 'player2' ? 1 : 0;
+      setWinProb({ player1: p1, player2: p2 });
+      setWinProbLoading(false);
+      return;
+    }
+    if (state.phase !== 'firing') {
+      setWinProb(null);
+      setWinProbLoading(false);
+      return;
+    }
+
+    fetchGenRef.current += 1;
+    const myGen = fetchGenRef.current;
+    setWinProbLoading(true);
+
+    const applyResult = (p: { player1: number; player2: number }) => {
+      if (myGen !== fetchGenRef.current) return;
+      const p1 = typeof p.player1 === 'number' ? p.player1 : 0.5;
+      const p2 = typeof p.player2 === 'number' ? p.player2 : 0.5;
+      setWinProb({ player1: p1, player2: p2 });
+    };
+    const doneLoading = () => {
+      if (myGen === fetchGenRef.current) setWinProbLoading(false);
+    };
+
+    getWinProbability(gameId, playerRole, 80)
+      .then(applyResult)
+      .catch(() => {
+        if (myGen !== fetchGenRef.current) return;
+        setWinProb({ player1: 0.5, player2: 0.5 });
+        setTimeout(() => {
+          if (fetchGenRef.current !== myGen) return;
+          fetchGenRef.current += 1;
+          const retryGen = fetchGenRef.current;
+          setWinProbLoading(true);
+          getWinProbability(gameId, playerRole, 80)
+            .then((p) => {
+              if (retryGen !== fetchGenRef.current) return;
+              const p1 = typeof p.player1 === 'number' ? p.player1 : 0.5;
+              const p2 = typeof p.player2 === 'number' ? p.player2 : 0.5;
+              setWinProb({ player1: p1, player2: p2 });
+            })
+            .catch(() => {
+              if (retryGen === fetchGenRef.current) setWinProb({ player1: 0.5, player2: 0.5 });
+            })
+            .finally(() => {
+              if (retryGen === fetchGenRef.current) setWinProbLoading(false);
+            });
+        }, 1500);
+      })
+      .finally(doneLoading);
+  }, [
+    gameId,
+    playerRole,
+    state.phase,
+    state.winner,
+    state.updatedAt,
+    state.player1Shots?.length,
+    state.player2Shots?.length,
+  ]);
+
+  const myWinPct = winProb
+    ? Math.round((playerRole === 'player1' ? winProb.player1 : winProb.player2) * 100)
+    : null;
+  const oppWinPct = winProb
+    ? Math.round((playerRole === 'player1' ? winProb.player2 : winProb.player1) * 100)
+    : null;
   const myBoard = playerRole === 'player1' ? state.player1Board : state.player2Board;
   const oppBoard = playerRole === 'player1' ? state.player2Board : state.player1Board;
   const myShots = (playerRole === 'player1' ? state.player1Shots : state.player2Shots) ?? [];
@@ -57,6 +133,24 @@ export function FiringPhase({ gameId, mode, playerRole, state, onStateChange, on
         </h1>
         {mode === 'multiplayer' && (
           <p className="firing__game-id">Game ID: {gameId.slice(0, 8)}… (share with opponent to join)</p>
+        )}
+        {(state.phase === 'firing' || state.phase === 'ended') && (
+          <div className="firing__win-prob">
+            {winProbLoading ? (
+              <span className="firing__win-prob-loading">Computing…</span>
+            ) : (
+              <>
+                <span className="firing__win-prob-you">You: {myWinPct ?? '—'}%</span>
+                <span className="firing__win-prob-bar">
+                  <span
+                    className="firing__win-prob-fill"
+                    style={{ width: `${myWinPct ?? 50}%` }}
+                  />
+                </span>
+                <span className="firing__win-prob-opp">Opponent: {oppWinPct ?? '—'}%</span>
+              </>
+            )}
+          </div>
         )}
       </header>
       {lastResult && (
