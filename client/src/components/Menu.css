@@ -7,12 +7,15 @@
 }
 
 .menu__card {
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 2rem 2.5rem;
-  max-width: 420px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 2.5rem 2.5rem;
+  max-width: 440px;
   width: 100%;
+  box-shadow: var(--glass-shadow);
 }
 
 .menu__title {
@@ -20,6 +23,10 @@
   font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .menu__subtitle {
@@ -37,29 +44,37 @@
 .menu__btn {
   padding: 0.85rem 1.25rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 1rem;
   font-weight: 600;
-  transition: background 0.15s;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+}
+
+.menu__btn:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .menu__btn--primary {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
   color: #fff;
+  box-shadow: 0 4px 16px var(--accent-glow);
 }
 
 .menu__btn--primary:hover:not(:disabled) {
-  background: var(--accent-dim);
+  box-shadow: 0 6px 24px var(--accent-glow);
 }
 
 .menu__btn--secondary {
-  background: var(--bg-cell);
+  background: rgba(30, 48, 80, 0.4);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .menu__btn--secondary:hover:not(:disabled) {
-  background: var(--border);
+  background: rgba(30, 48, 80, 0.6);
+  border-color: rgba(148, 163, 184, 0.2);
 }
 
 .menu__multi {
@@ -76,9 +91,11 @@
   font-size: 0.95rem;
   padding: 0.5rem 0;
   text-align: left;
+  transition: color 0.15s;
 }
 
 .menu__link:hover {
+  color: var(--text);
   text-decoration: underline;
 }
 
@@ -91,12 +108,21 @@
 
 .menu__input {
   padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-dark);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--text);
   font-size: 1rem;
   font-family: var(--font-mono);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.menu__input:focus {
+  outline: none;
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 12px var(--accent-glow);
 }
 
 .menu__input::placeholder {
@@ -153,11 +179,20 @@
 .menu__sim-field select,
 .menu__sim-field input {
   padding: 0.35rem 0.5rem;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg-cell);
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--text);
   font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+
+.menu__sim-field select:focus,
+.menu__sim-field input:focus {
+  outline: none;
+  border-color: rgba(56, 189, 248, 0.4);
 }
 
 .menu__sim-btn {
@@ -182,4 +217,3 @@
   margin: 0;
   padding-left: 1.1rem;
 }
-

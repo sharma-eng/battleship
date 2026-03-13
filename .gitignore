@@ -1,3 +1,4 @@
 node_modules
 README.md
 DEPLOY_VERCEL.md
+server/data/games.json

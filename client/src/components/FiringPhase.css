@@ -4,7 +4,7 @@
 }
 
 .firing__header {
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .firing__back {
@@ -14,6 +14,7 @@
   font-size: 0.9rem;
   padding: 0.25rem 0;
   margin-bottom: 0.5rem;
+  transition: color 0.15s;
 }
 
 .firing__back:hover {
@@ -34,18 +35,24 @@
 
 .firing__feedback {
   padding: 0.75rem 1rem;
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 1rem;
   font-weight: 600;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid transparent;
 }
 
 .firing__feedback--hit {
-  background: rgba(224, 36, 94, 0.2);
+  background: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.2);
   color: var(--hit);
+  box-shadow: 0 4px 16px var(--hit-glow);
 }
 
 .firing__feedback--miss {
-  background: rgba(101, 119, 134, 0.3);
+  background: rgba(100, 116, 139, 0.15);
+  border-color: rgba(100, 116, 139, 0.15);
   color: var(--text-muted);
 }
 
@@ -58,22 +65,37 @@
 
 .firing__panel {
   flex: 0 0 auto;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 1.25rem 1.25rem 1rem;
+  box-shadow: var(--glass-shadow);
 }
 
 .firing__panel h2 {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-muted);
+  letter-spacing: 0.02em;
 }
 
 .firing__win-prob {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-top: 0.5rem;
+  margin-top: 0.6rem;
   font-size: 0.9rem;
   color: var(--text-muted);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 0.5rem 0.85rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 .firing__win-prob-loading {
@@ -82,25 +104,29 @@
 
 .firing__win-prob-you {
   min-width: 5rem;
+  font-weight: 600;
+  color: var(--accent);
 }
 
 .firing__win-prob-bar {
   flex: 1;
   max-width: 12rem;
-  height: 0.5rem;
-  background: rgba(101, 119, 134, 0.3);
-  border-radius: 4px;
+  height: 6px;
+  background: rgba(148, 163, 184, 0.12);
+  border-radius: 3px;
   overflow: hidden;
 }
 
 .firing__win-prob-fill {
   display: block;
   height: 100%;
-  background: var(--accent);
-  border-radius: 4px;
-  transition: width 0.2s ease;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--ship) 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 .firing__win-prob-opp {
   min-width: 6rem;
+  text-align: right;
 }

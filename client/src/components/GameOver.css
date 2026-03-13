@@ -7,17 +7,26 @@
 }
 
 .game-over__card {
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 2rem 2.5rem;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 2.5rem 2.5rem;
   text-align: center;
+  box-shadow: var(--glass-shadow);
+  max-width: 440px;
+  width: 100%;
 }
 
 .game-over__title {
   margin: 0 0 1rem;
   font-size: 1.75rem;
   font-weight: 700;
+  background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .game-over__history {
@@ -79,24 +88,35 @@
 .game-over__btn {
   padding: 0.85rem 1.25rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 1rem;
   font-weight: 600;
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
   color: #fff;
+  box-shadow: 0 4px 16px var(--accent-glow);
+  transition: box-shadow 0.2s, transform 0.1s;
 }
 
 .game-over__btn:hover {
-  background: var(--accent-dim);
+  box-shadow: 0 6px 24px var(--accent-glow);
+}
+
+.game-over__btn:active {
+  transform: scale(0.98);
 }
 
 .game-over__btn--secondary {
-  background: transparent;
+  background: rgba(30, 48, 80, 0.4);
   color: var(--text-muted);
-  border: 1px solid var(--border);
+  border: 1px solid var(--glass-border);
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .game-over__btn--secondary:hover {
-  background: var(--bg-cell);
+  background: rgba(30, 48, 80, 0.6);
   color: var(--text);
+  box-shadow: none;
+  border-color: rgba(148, 163, 184, 0.2);
 }
