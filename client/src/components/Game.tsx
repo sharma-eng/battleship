@@ -47,7 +47,7 @@ export function Game({ mode, gameId, playerRole, onBackToMenu, onRematch }: Game
   useEffect(() => {
     if (!socket) return;
     const handler = () => {
-      if (Date.now() - lastLocalUpdateRef.current < 2000) return;
+      if (Date.now() - lastLocalUpdateRef.current < 300) return;
       refreshState();
     };
     socket.on('gameUpdated', handler);
@@ -55,6 +55,18 @@ export function Game({ mode, gameId, playerRole, onBackToMenu, onRematch }: Game
       socket.off('gameUpdated', handler);
     };
   }, [socket, refreshState]);
+
+  // Polling fallback for multiplayer: if a socket event is ever missed,
+  // recover within a few seconds instead of staying stuck forever.
+  useEffect(() => {
+    if (mode !== 'multiplayer') return;
+    if (!state || state.phase === 'ended') return;
+    const id = setInterval(() => {
+      if (Date.now() - lastLocalUpdateRef.current < 1000) return;
+      refreshState();
+    }, 2500);
+    return () => clearInterval(id);
+  }, [mode, state?.phase, refreshState]);
 
   if (loading) return <div className="game-loading">Loading game…</div>;
   if (error) return <div className="game-error">{error} <button onClick={onBackToMenu}>Back to menu</button></div>;

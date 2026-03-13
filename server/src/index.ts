@@ -20,7 +20,7 @@ import { getWinProbability } from './winProbability.js';
 const app = express();
 const httpServer = createServer(app);
 
-const pubClient = redis;
+const pubClient = redis.duplicate();
 const subClient = redis.duplicate();
 const io = new Server(httpServer, { path: '/socket.io', cors: { origin: '*' } });
 io.adapter(createAdapter(pubClient, subClient));
