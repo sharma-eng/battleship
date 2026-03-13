@@ -51,11 +51,17 @@ export function Game({ mode, gameId, playerRole, onBackToMenu, onRematch }: Game
   if (!state) return null;
 
   if (state.phase === 'ended') {
+    const movesLog = state.movesLog ?? [];
+    const totalMoves = movesLog.length || (state.player1Shots?.length ?? 0) + (state.player2Shots?.length ?? 0);
     return (
       <GameOver
         winner={state.winner}
         playerRole={playerRole}
         mode={mode}
+        createdAt={state.createdAt}
+        completedAt={state.completedAt ?? state.updatedAt}
+        movesLog={movesLog}
+        totalMoves={totalMoves}
         onRematch={() => onRematch(mode)}
         onMenu={onBackToMenu}
       />

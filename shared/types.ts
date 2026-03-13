@@ -43,6 +43,15 @@ export interface ShotResult {
   gameOver?: boolean;
 }
 
+/** A single recorded move (shot) in a completed game. */
+export interface HistoryMove {
+  player: PlayerRole;
+  row: number;
+  col: number;
+  hit: boolean;
+  sunkShipId?: ShipId;
+}
+
 export interface GameState {
   gameId: string;
   mode: GameMode;
@@ -57,13 +66,7 @@ export interface GameState {
   winner: PlayerRole | null;
   createdAt: number;
   updatedAt: number;
+  completedAt?: number;
+  movesLog?: HistoryMove[];
 }
 
-export interface GameHistoryEntry {
-  gameId: string;
-  mode: GameMode;
-  winner: PlayerRole | null;
-  moves: number;
-  createdAt: number;
-  completedAt: number;
-}

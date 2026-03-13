@@ -11,7 +11,6 @@ import {
   getStateForPlayer,
   getGamesMap,
 } from './gameManager.js';
-import { loadHistory } from './storage.js';
 import { getAIShot } from './ai.js';
 import type { PlayerRole } from './shared/types.js';
 
@@ -29,16 +28,6 @@ app.post('/api/games', (req, res) => {
   const mode = req.body?.mode === 'multiplayer' ? 'multiplayer' : 'ai';
   const state = createGame(mode);
   res.json({ gameId: state.gameId });
-});
-
-// REST: get game history (for querying completed games)
-app.get('/api/history', async (_req, res) => {
-  try {
-    const history = await loadHistory();
-    res.json(history);
-  } catch {
-    res.status(500).json([]);
-  }
 });
 
 // REST: get game (player optional; default player1 for backward compat)

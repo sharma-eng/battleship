@@ -11,7 +11,7 @@ import {
   getCellsForPlacement,
 } from './shared/gameLogic.js';
 import { GRID_SIZE } from './shared/constants.js';
-import { loadGames, saveGames, loadHistory, appendHistory } from './storage.js';
+import { loadGames, saveGames } from './storage.js';
 
 let games: Record<string, GameState> = {};
 
@@ -75,6 +75,7 @@ export function createGame(mode: GameMode): GameState {
     winner: null,
     createdAt: now,
     updatedAt: now,
+    movesLog: [],
   };
   games[gameId] = state;
   persist();
@@ -165,6 +166,9 @@ export function fire(
   const { hit, sunkShipId, sunkShipName, allSunk } = processShot(targetBoard, row, col);
   shots.push({ row, col, hit, sunkShipId });
 
+  if (!state.movesLog) state.movesLog = [];
+  state.movesLog.push({ player, row, col, hit, sunkShipId });
+
   state.updatedAt = Date.now();
   state.currentTurn = hit ? player : player === 'player1' ? 'player2' : 'player1';
 
@@ -172,15 +176,7 @@ export function fire(
     state.phase = 'ended';
     state.winner = player;
     state.currentTurn = null;
-    const moves = state.player1Shots.length + state.player2Shots.length;
-    appendHistory({
-      gameId,
-      mode: state.mode,
-      winner: state.winner,
-      moves,
-      createdAt: state.createdAt,
-      completedAt: Date.now(),
-    });
+    state.completedAt = Date.now();
   }
 
   persist();

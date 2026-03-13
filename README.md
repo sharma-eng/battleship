@@ -72,11 +72,12 @@ Vercel does **not** run long-lived servers or WebSockets. For **vs Human** (Sock
 | **Vercel** | `client` | `VITE_API_URL` = backend URL     |
 | **Railway**| `server` | Use generated public URL         |
 
-## Persistence and storage choice
+## Game history (moves, outcome, timestamps)
 
-- **In-game state**: Kept in memory and persisted to `server/data/games.json` so games survive server restarts and refreshes.
-- **History**: Completed games are appended to `server/data/history.json` (gameId, mode, winner, move count, timestamps). Query with `GET /api/history`.
-- **Why file-based**: Simple, no DB setup, suitable for single-instance deployment. For scale, replace the storage layer in `server/src/storage.ts` with SQLite or a remote DB.
+For each game, moves, outcome, and timestamps are stored **on that game’s state** so they survive page reload and both players can see them at game-over.
+
+- **Stored on the game**: `createdAt`, `completedAt`, `movesLog` (chronological list of shots: player, row, col, hit, sunkShipId), and `winner`. Persisted in `server/data/games.json` with the rest of the game state.
+- **Shown at game-over**: The Game Over screen shows a “Game summary” (started/ended time, total moves, mode, and the full moves list).
 
 ## Cheating and prevention
 
@@ -95,5 +96,4 @@ Vercel does **not** run long-lived servers or WebSockets. For **vs Human** (Sock
 - `GET /api/games/:gameId?player=player1|player2` — get game state (player-specific view)
 - `POST /api/games/:gameId/placements` — body: `{ "player", "placements" }` → `{ "ok": true }`
 - `POST /api/games/:gameId/fire` — body: `{ "player", "row", "col" }` → `{ "hit", "sunkShipName?", "gameOver?", "state" }`
-- `GET /api/history` — list completed games (moves, outcome, timestamps)
 
