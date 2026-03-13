@@ -137,6 +137,7 @@ Vercel does **not** run long-lived Node servers or WebSockets; Railway does. The
 - **Cheat prevention**:
   - Server never sends opponent ship positions to the client. Each player sees only an “opponent view” (hit/miss/sunk from their own shots).
   - The server enforces turn order (`currentTurn`) and rejects duplicate shots.
+  - one other thing to consider is that a player may use a script to bypass the turn recording latency.
   - Ship placements are fully validated server-side (correct ships, no overlaps, in-bounds).
 
 ## Scaling and performance
