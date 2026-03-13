@@ -1,6 +1,6 @@
 # Battleship
 
-A full-stack Battleship game with **vs. AI** and **vs. Human (real-time multiplayer)**. Built with React (TypeScript), Express, and Socket.io.
+A full-stack Battleship game with **vs. AI** and **vs. Human (real-time multiplayer)**. Built with React (TypeScript), Express, Socket.io, and Redis.
 
 ## Features
 
@@ -9,14 +9,44 @@ A full-stack Battleship game with **vs. AI** and **vs. Human (real-time multipla
 - **Firing phase**: Your fleet (with incoming hits) and your shots (hit/miss/sunk on opponent grid), with clear feedback after each shot.
 - **vs. AI**: AI places ships randomly; AI firing uses **smart targeting** (probes adjacent cells after a hit) instead of purely random.
 - **vs. Human**: Two players in separate browser windows; real-time updates via Socket.io (no manual refresh). Create game → share Game ID → other player joins with that ID.
-- **Persistence**: Game state survives page refresh (stored on server + `localStorage` for game ID and player role). Completed games are recorded (moves, outcome, timestamps) and can be queried via `/api/history`.
+- **Persistence**: Game state survives page refresh (stored in Redis on the server + `localStorage` for game ID and player role). Each game records moves, outcome, and timestamps and shows a summary at game over.
+- **Win probability**: During the firing phase, the UI shows an estimated win probability for each player based on Monte Carlo playouts from the current state.
+- **AI vs AI Monte Carlo**: Run large batches of simulated games between different AI strategies (parity, hunt, random, probability) to compare win rates and move counts.
 
 ## Tech Stack
 
 - **Frontend**: React 18, TypeScript, Vite
 - **Backend**: Node.js, Express
-- **Real-time**: Socket.io
-- **Storage**: Local file-based JSON (`server/data/`) for games and history — no external DB. Easy to swap to SQLite or PostgreSQL later.
+- **Real-time**: Socket.io with Redis adapter (for multi-instance scaling)
+- **Storage**:
+  - **Game state**: Redis (`game:{gameId}` keys, TTL 24h)
+  - **Client session**: `localStorage` (gameId, mode, playerRole)
+
+## Project structure
+
+- **`client/`** – Vite + React app
+  - `src/App.tsx` – top-level app; switches between menu and game, restores last game from local storage
+  - `src/components/Menu.tsx` – mode selection (vs AI / vs Human), create/join game, Monte Carlo controls
+  - `src/components/Game.tsx` – loads game state, wires Socket.io, renders `PlacementPhase`, `FiringPhase`, or `GameOver` depending on `state.phase`
+  - `src/components/PlacementPhase.tsx` – ship placement UI and submission
+  - `src/components/FiringPhase.tsx` – firing UI, win probability display, calls `fire` API
+  - `src/components/Grid.tsx` – reusable 10×10 grid (placement/firing)
+  - `src/hooks/useSocket.ts` – Socket.io client for multiplayer (`gameUpdated` events)
+  - `src/api.ts` – HTTP API client (create game, join, get state, placements, fire, win probability, Monte Carlo sim)
+  - `src/config.ts` – `API_BASE` and `SOCKET_URL` (dev vs prod via `VITE_API_URL`)
+- **`server/`** – Express + Socket.io + Redis
+  - `src/index.ts` – HTTP and Socket.io server, REST routes, `gameUpdated` broadcast, Redis Socket.io adapter
+  - `src/gameManager.ts` – core game rules and state transitions (createGame, submitPlacements, fire, getStateForPlayer)
+  - `src/storage.ts` – Redis-backed persistence (`getGameState`, `setGameState`, `deleteGameState`)
+  - `src/ai.ts` – in-game AI target selection
+  - `src/simMonteCarlo.ts` – AI vs AI Monte Carlo simulation
+  - `src/strategies.ts` – AI strategies for simulation (random, hunt, parity, probability)
+  - `src/winProbability.ts` – win-probability estimation via random playouts
+  - `src/shared/*` – server-side copy of shared types/constants/game logic
+- **`shared/`** – shared logic used by the client (and mirrored on the server)
+  - `types.ts` – `GameState`, `Board`, `ShipPlacement`, ship specs, etc.
+  - `constants.ts` – grid size and coordinate letters
+  - `gameLogic.ts` – core board operations (placements, shots, win detection)
 
 ## Running locally
 
@@ -28,66 +58,92 @@ npm install
 cd client && npm install && cd ..
 cd server && npm install && cd ..
 
+# Start a local Redis (or point REDIS_URL at a hosted Redis)
+# Example with Docker:
+# docker run -p 6379:6379 redis
+
+# Create a server/.env for local dev (not needed in production)
+cd server
+echo "REDIS_URL=redis://localhost:6379" > .env
+cd ..
+
 # Run both (client on :5173, server on :3001)
 npm run dev
 ```
 
-Open http://localhost:5173. For multiplayer, open a second window and use “Join game” with the Game ID shown to the creator.
+Open `http://localhost:5173` (or the Vite port it prints). For multiplayer, open a second window and use “Join game” with the Game ID shown to the creator.
 
 ## Build & production
 
 ```bash
+# Build client and server
 npm run build
-# Serve client build (e.g. from client/dist) and run server:
-cd server && npm start
+
+# Start the compiled server (from the repo root)
+cd server
+npm start   # runs: node dist/index.js
 ```
 
-Set `PORT` for the server (default 3001). In production, serve the client with the same host as the API or set Vite proxy / env so `/api` and `/socket.io` point to the server.
+The server reads:
 
-## Deployment: Vercel (frontend) + Railway (backend)
+- `PORT` (default `3001`)
+- `REDIS_URL` (required in production)
 
-Vercel does **not** run long-lived servers or WebSockets. For **vs Human** (Socket.io) to work:
+In production you typically:
 
-- The client’s API base and Socket.io path match the deployed server URL.
-- **Backend** (Express + Socket.io) on Railway, Render, or Fly.io.
+- Serve the built client (`client/dist`) from a static host (e.g. Vercel).
+- Run the server separately (e.g. on Railway, Fly.io, Render).
+- Point the client at the server using `VITE_API_URL` (see below).
 
-### 1. Deploy the backend (e.g. Railway)
+## Deployment: Vercel (frontend) + Railway (backend + Redis)
+
+Vercel does **not** run long-lived Node servers or WebSockets; Railway does. The recommended setup:
+
+- **Backend**: Express + Socket.io + Redis on Railway
+- **Frontend**: Static Vite build on Vercel
+
+### 1. Deploy the backend on Railway
 
 1. Push your repo to GitHub.
-2. Go to [railway.app](https://railway.app), sign in, **New Project** → **Deploy from GitHub** → select your repo.
-3. Set **Root Directory** to `server`.
-4. **Settings** → **Start Command**: `npx tsx src/index.ts`.
-5. Deploy and copy the public URL (e.g. `https://battleship-xxxx.up.railway.app`). No trailing slash.
+2. On `railway.app`, create:
+   - A **Redis** service.
+   - A **Node** service pointing at the `server` directory.
+3. In the Node service:
+   - Set **Root Directory** to `server`.
+   - Use the default build (`npm install && npm run build`).
+   - **Start Command**: `npm start` (which runs `node dist/index.js`).
+   - Add an environment variable `REDIS_URL` pointing at the internal Redis connection string.
+4. Deploy and copy the public URL (e.g. `https://battleship-xxxx.up.railway.app`), **no trailing slash**.
 
 ### 2. Deploy the frontend to Vercel
 
-1. Go to [vercel.com](https://vercel.com), sign in, **Add New** → **Project** → import the same GitHub repo.
-2. **Root Directory**: set to `client`.
+1. On `vercel.com`, import the same GitHub repo.
+2. Set **Root Directory** to `client`.
 3. **Build Command**: `npm run build`. **Output Directory**: `dist`.
-4. **Environment Variables**: add `VITE_API_URL` = your backend URL from step 1.
-5. Deploy. The client uses that URL for `/api` and Socket.io, so vs Human and all features work.
+4. Add environment variable `VITE_API_URL` = your Railway backend URL (step 4 above).
+5. Deploy. The client will use that URL for:
+   - `GET/POST` under `/api`
+   - Socket.io at `/socket.io`
 
-| Where       | Deploy   | Config                          |
-|------------|----------|----------------------------------|
-| **Vercel** | `client` | `VITE_API_URL` = backend URL     |
-| **Railway**| `server` | Use generated public URL         |
+| Where        | Deploy    | Config                          |
+|-------------|-----------|----------------------------------|
+| **Vercel**  | `client`  | `VITE_API_URL` = backend URL     |
+| **Railway** | `server`  | `REDIS_URL`, optional `PORT`     |
 
-## Game history (moves, outcome, timestamps)
+## Game history and anti-cheat
 
-For each game, moves, outcome, and timestamps are stored **on that game’s state** so they survive page reload and both players can see them at game-over.
+- **On each game**: `createdAt`, `updatedAt`, optional `completedAt`, and `movesLog` (chronological list of shots: player, row, col, hit, sunkShipId) plus `winner`. These live inside the `GameState` in Redis.
+- **Displayed at game-over**: The Game Over screen shows a summary (started/ended time, total moves, mode, and the full moves list).
+- **Cheat prevention**:
+  - Server never sends opponent ship positions to the client. Each player sees only an “opponent view” (hit/miss/sunk from their own shots).
+  - The server enforces turn order (`currentTurn`) and rejects duplicate shots.
+  - Ship placements are fully validated server-side (correct ships, no overlaps, in-bounds).
 
-- **Stored on the game**: `createdAt`, `completedAt`, `movesLog` (chronological list of shots: player, row, col, hit, sunkShipId), and `winner`. Persisted in `server/data/games.json` with the rest of the game state.
-- **Shown at game-over**: The Game Over screen shows a “Game summary” (started/ended time, total moves, mode, and the full moves list).
+## Scaling and performance
 
-## Cheating and prevention
-
-- **Opponent board**: Server never sends ship positions to the client. Each player only receives a “view” of the opponent grid (hit/miss/sunk from their own shots) via `getStateForPlayer`.
-- **Turn and shot validity**: Only the current player can fire; server checks `currentTurn` and rejects duplicate shots.
-- **Placements**: Server validates placement count and overlap in `validatePlacements`; no client-only placement trust.
-
-## Scaling (huge board)
-
-- **Complexity**: Grid is O(G²) in size; shot and placement checks are O(ship length). For a huge board, use sparse structures (e.g. a Set of ship cells and a Set of shot cells) instead of a full 2D array so memory and lookups stay proportional to ships and shots.
+- **Redis-backed state** allows you to run multiple server instances behind a load balancer (Socket.io uses the Redis adapter to broadcast between instances).
+- **Game complexity**: Grid is O(G²); shot and placement checks are O(ship length). For much larger boards you can switch to sparse sets for ships and shots to keep memory proportional to actual activity.
+- **Monte Carlo endpoints** are CPU-bound; if you need to push them to very high `n` or traffic, you can move them to a separate worker service.
 
 ## API
 
@@ -96,4 +152,6 @@ For each game, moves, outcome, and timestamps are stored **on that game’s stat
 - `GET /api/games/:gameId?player=player1|player2` — get game state (player-specific view)
 - `POST /api/games/:gameId/placements` — body: `{ "player", "placements" }` → `{ "ok": true }`
 - `POST /api/games/:gameId/fire` — body: `{ "player", "row", "col" }` → `{ "hit", "sunkShipName?", "gameOver?", "state" }`
+- `GET /api/games/:gameId/win-probability?n=150` — estimated win probability from the current state
+- `POST /api/sim/monte-carlo` — body: `{ "games"?, "p1Strategy"?, "p2Strategy"? }` → simulation stats (AI vs AI)
 
