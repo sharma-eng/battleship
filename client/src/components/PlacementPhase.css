@@ -1,0 +1,134 @@
+.placement {
+  min-height: 100vh;
+  padding: 1rem 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.placement__header {
+  margin-bottom: 1rem;
+}
+
+.placement__back {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  padding: 0.25rem 0;
+  margin-bottom: 0.5rem;
+}
+
+.placement__back:hover {
+  color: var(--accent);
+}
+
+.placement__title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.placement__game-id {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.placement__game-id strong {
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+
+.placement__content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.placement__board-wrap {
+  flex: 0 0 auto;
+}
+
+.placement__hint {
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.placement__hint button {
+  margin-left: 0.5rem;
+  background: var(--bg-cell);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.placement__hint button:hover {
+  background: var(--border);
+}
+
+.placement__ships {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.placement__ship {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.placement__ship--placed {
+  color: var(--ship);
+}
+
+.placement__ship--current {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.placement__error {
+  margin: 1rem 0 0;
+  color: var(--hit);
+  font-size: 0.9rem;
+}
+
+.placement__footer {
+  margin-top: auto;
+  padding-top: 1.5rem;
+}
+
+.placement__confirm {
+  padding: 0.85rem 1.5rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.placement__confirm:hover:not(:disabled) {
+  background: var(--accent-dim);
+}
+
+.placement__waiting,
+.placement__waiting-label,
+.placement__waiting-hint {
+  margin: 0.5rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.placement__waiting strong,
+.placement__waiting-label {
+  color: var(--text);
+}
+
+.placement__waiting-hint {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+}

@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/storage.ts","./src/components/firingphase.tsx","./src/components/game.tsx","./src/components/gameover.tsx","./src/components/grid.tsx","./src/components/menu.tsx","./src/components/placementphase.tsx","./src/hooks/usesocket.ts"],"version":"5.9.3"}
