@@ -1,16 +1,15 @@
+import { memo } from 'react';
 import { GRID_SIZE, COORDINATE_LETTERS } from '@shared/constants';
 import type { Board, GridCell } from '@shared/types';
 import './Grid.css';
 
 interface GridProps {
   board: Board | null;
-  /** If true, hide ship cells (show only hit/miss/sunk). Used for opponent grid. */
   hideShips?: boolean;
-  /** If true, cells are clickable (e.g. placement or firing). */
   interactive?: boolean;
   onCellClick?: (row: number, col: number) => void;
-  /** Optional overlay board for showing shots (same size, cells with hit/miss) */
   shots?: Array<{ row: number; col: number; hit: boolean }>;
+  pendingShot?: { row: number; col: number } | null;
   className?: string;
 }
 
@@ -19,12 +18,13 @@ function getDisplayState(cell: GridCell, hideShips: boolean): GridCell['state'] 
   return cell.state;
 }
 
-export function Grid({
+function GridInner({
   board,
   hideShips = false,
   interactive = false,
   onCellClick,
   shots = [],
+  pendingShot,
   className = '',
 }: GridProps) {
   const shotSet = new Set(shots.map((s) => `${s.row},${s.col}`));
@@ -55,18 +55,22 @@ export function Grid({
             const displayState = getDisplayState(cell, hideShips);
             const hasShot = hideShips && shotSet.has(`${r},${c}`);
             const isHit = hideShips && shotHit.has(`${r},${c}`);
+            const isPending = pendingShot?.row === r && pendingShot?.col === c;
+
             let stateClass = 'grid__cell--empty';
-            if (displayState === 'ship') stateClass = 'grid__cell--ship';
+            if (isPending) stateClass = 'grid__cell--pending';
+            else if (displayState === 'ship') stateClass = 'grid__cell--ship';
             else if (displayState === 'hit' || (hasShot && isHit)) stateClass = 'grid__cell--hit';
             else if (displayState === 'miss' || (hasShot && !isHit)) stateClass = 'grid__cell--miss';
             else if (displayState === 'sunk') stateClass = 'grid__cell--sunk';
+
             const alreadyShot = hideShips && (displayState === 'hit' || displayState === 'miss' || displayState === 'sunk');
             return (
               <button
                 key={c}
                 type="button"
                 className={`grid__cell ${stateClass}`}
-                disabled={!interactive || alreadyShot}
+                disabled={!interactive || alreadyShot || isPending}
                 onClick={() => onCellClick?.(r, c)}
                 aria-label={`${COORDINATE_LETTERS[c]}${r + 1}`}
               />
@@ -77,3 +81,5 @@ export function Grid({
     </div>
   );
 }
+
+export const Grid = memo(GridInner);

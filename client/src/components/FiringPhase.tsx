@@ -18,12 +18,11 @@ export function FiringPhase({ gameId, mode, playerRole, state, onStateChange, on
   const [firing, setFiring] = useState(false);
   const [winProb, setWinProb] = useState<{ player1: number; player2: number } | null>(null);
   const [winProbLoading, setWinProbLoading] = useState(false);
+  const [pendingShot, setPendingShot] = useState<{ row: number; col: number } | null>(null);
   const fetchGenRef = useRef(0);
 
   const isMyTurn = state.currentTurn === playerRole;
 
-  // Update win probability after every move (and on mount when in firing phase).
-  // Use a generation ref so we only apply the result from the latest fetch, and never ignore a response due to effect re-run.
   useEffect(() => {
     if (state.phase === 'ended') {
       const p1 = state.winner === 'player1' ? 1 : 0;
@@ -56,22 +55,16 @@ export function FiringPhase({ gameId, mode, playerRole, state, onStateChange, on
       .then(applyResult)
       .catch(() => {
         if (myGen !== fetchGenRef.current) return;
-        setWinProb({ player1: 0.5, player2: 0.5 });
         setTimeout(() => {
           if (fetchGenRef.current !== myGen) return;
           fetchGenRef.current += 1;
           const retryGen = fetchGenRef.current;
-          setWinProbLoading(true);
           getWinProbability(gameId, playerRole, 80)
             .then((p) => {
               if (retryGen !== fetchGenRef.current) return;
-              const p1 = typeof p.player1 === 'number' ? p.player1 : 0.5;
-              const p2 = typeof p.player2 === 'number' ? p.player2 : 0.5;
-              setWinProb({ player1: p1, player2: p2 });
+              setWinProb({ player1: p.player1, player2: p.player2 });
             })
-            .catch(() => {
-              if (retryGen === fetchGenRef.current) setWinProb({ player1: 0.5, player2: 0.5 });
-            })
+            .catch(() => {})
             .finally(() => {
               if (retryGen === fetchGenRef.current) setWinProbLoading(false);
             });
@@ -103,10 +96,11 @@ export function FiringPhase({ gameId, mode, playerRole, state, onStateChange, on
       if (!isMyTurn || firing) return;
       const alreadyShot = myShots.some((s) => s.row === row && s.col === col);
       if (alreadyShot) return;
+      setPendingShot({ row, col });
       setFiring(true);
-      setLastResult(null);
       try {
         const result = await fire(gameId, playerRole, row, col);
+        setPendingShot(null);
         setLastResult({
           hit: result.hit,
           sunkShipName: result.sunkShipName,
@@ -114,6 +108,7 @@ export function FiringPhase({ gameId, mode, playerRole, state, onStateChange, on
         });
         if (result.state) onStateChange(result.state);
       } catch (e) {
+        setPendingShot(null);
         setLastResult({ hit: false, gameOver: false });
       } finally {
         setFiring(false);
@@ -135,31 +130,27 @@ export function FiringPhase({ gameId, mode, playerRole, state, onStateChange, on
           <p className="firing__game-id">Game ID: {gameId.slice(0, 8)}… (share with opponent to join)</p>
         )}
         {(state.phase === 'firing' || state.phase === 'ended') && (
-          <div className="firing__win-prob">
-            {winProbLoading ? (
-              <span className="firing__win-prob-loading">Computing…</span>
-            ) : (
-              <>
-                <span className="firing__win-prob-you">You: {myWinPct ?? '—'}%</span>
-                <span className="firing__win-prob-bar">
-                  <span
-                    className="firing__win-prob-fill"
-                    style={{ width: `${myWinPct ?? 50}%` }}
-                  />
-                </span>
-                <span className="firing__win-prob-opp">Opponent: {oppWinPct ?? '—'}%</span>
-              </>
-            )}
+          <div className={`firing__win-prob ${winProbLoading && winProb ? 'firing__win-prob--updating' : ''}`}>
+            <span className="firing__win-prob-you">You: {myWinPct ?? '—'}%</span>
+            <span className="firing__win-prob-bar">
+              <span
+                className="firing__win-prob-fill"
+                style={{ width: `${myWinPct ?? 50}%` }}
+              />
+            </span>
+            <span className="firing__win-prob-opp">Opponent: {oppWinPct ?? '—'}%</span>
           </div>
         )}
       </header>
-      {lastResult && (
-        <div className={`firing__feedback firing__feedback--${lastResult.hit ? 'hit' : 'miss'}`}>
-          {lastResult.hit ? 'Hit!' : 'Miss'}
-          {lastResult.sunkShipName && ` — ${lastResult.sunkShipName} sunk!`}
-          {lastResult.gameOver && ' You win!'}
-        </div>
-      )}
+      <div className={`firing__feedback-wrap ${lastResult ? 'firing__feedback-wrap--visible' : ''}`}>
+        {lastResult && (
+          <div className={`firing__feedback firing__feedback--${lastResult.hit ? 'hit' : 'miss'}`}>
+            {lastResult.hit ? 'Hit!' : 'Miss'}
+            {lastResult.sunkShipName && ` — ${lastResult.sunkShipName} sunk!`}
+            {lastResult.gameOver && ' You win!'}
+          </div>
+        )}
+      </div>
       <div className="firing__grids">
         <section className="firing__panel">
           <h2>Your fleet</h2>
@@ -173,6 +164,7 @@ export function FiringPhase({ gameId, mode, playerRole, state, onStateChange, on
             shots={myShots}
             interactive={isMyTurn && !firing}
             onCellClick={handleFire}
+            pendingShot={pendingShot}
           />
         </section>
       </div>

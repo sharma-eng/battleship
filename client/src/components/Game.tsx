@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import type { GameMode, PlayerRole } from '@shared/types';
 import { getGame } from '../api';
 import { useSocket } from '../hooks/useSocket';
@@ -19,6 +19,7 @@ export function Game({ mode, gameId, playerRole, onBackToMenu, onRematch }: Game
   const [state, setState] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const lastLocalUpdateRef = useRef(0);
 
   const socket = useSocket(gameId, mode);
 
@@ -34,15 +35,24 @@ export function Game({ mode, gameId, playerRole, onBackToMenu, onRematch }: Game
     }
   }, [gameId, playerRole]);
 
+  const handleStateChange = useCallback((s: GameState) => {
+    lastLocalUpdateRef.current = Date.now();
+    setState(s);
+  }, []);
+
   useEffect(() => {
     refreshState();
   }, [refreshState]);
 
   useEffect(() => {
     if (!socket) return;
-    socket.on('gameUpdated', () => refreshState());
+    const handler = () => {
+      if (Date.now() - lastLocalUpdateRef.current < 2000) return;
+      refreshState();
+    };
+    socket.on('gameUpdated', handler);
     return () => {
-      socket.off('gameUpdated');
+      socket.off('gameUpdated', handler);
     };
   }, [socket, refreshState]);
 
@@ -87,7 +97,7 @@ export function Game({ mode, gameId, playerRole, onBackToMenu, onRematch }: Game
       mode={mode}
       playerRole={playerRole}
       state={state}
-      onStateChange={setState}
+      onStateChange={handleStateChange}
       onBack={onBackToMenu}
     />
   );
