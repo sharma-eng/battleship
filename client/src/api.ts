@@ -1,4 +1,4 @@
-const API_BASE = '/api';
+import { API_BASE } from './config';
 
 export async function createGame(mode: 'ai' | 'multiplayer'): Promise<{ gameId: string }> {
   const res = await fetch(`${API_BASE}/games`, {

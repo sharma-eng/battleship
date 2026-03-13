@@ -44,14 +44,33 @@ cd server && npm start
 
 Set `PORT` for the server (default 3001). In production, serve the client with the same host as the API or set Vite proxy / env so `/api` and `/socket.io` point to the server.
 
-## Deployment
+## Deployment: Vercel (frontend) + Railway (backend)
 
-Deploy the server (Node) and static client to any host (e.g. Railway, Render, Fly.io, Vercel + serverless, or a VPS). Ensure:
+Vercel does **not** run long-lived servers or WebSockets. For **vs Human** (Socket.io) to work:
 
 - The client’s API base and Socket.io path match the deployed server URL.
-- Server has write access to `data/` (or configure another path) for `games.json` and `history.json`.
+- **Backend** (Express + Socket.io) on Railway, Render, or Fly.io.
 
-**Live link**: Add your deployed URL here after deployment.
+### 1. Deploy the backend (e.g. Railway)
+
+1. Push your repo to GitHub.
+2. Go to [railway.app](https://railway.app), sign in, **New Project** → **Deploy from GitHub** → select your repo.
+3. Set **Root Directory** to `server`.
+4. **Settings** → **Start Command**: `npx tsx src/index.ts`.
+5. Deploy and copy the public URL (e.g. `https://battleship-xxxx.up.railway.app`). No trailing slash.
+
+### 2. Deploy the frontend to Vercel
+
+1. Go to [vercel.com](https://vercel.com), sign in, **Add New** → **Project** → import the same GitHub repo.
+2. **Root Directory**: set to `client`.
+3. **Build Command**: `npm run build`. **Output Directory**: `dist`.
+4. **Environment Variables**: add `VITE_API_URL` = your backend URL from step 1.
+5. Deploy. The client uses that URL for `/api` and Socket.io, so vs Human and all features work.
+
+| Where       | Deploy   | Config                          |
+|------------|----------|----------------------------------|
+| **Vercel** | `client` | `VITE_API_URL` = backend URL     |
+| **Railway**| `server` | Use generated public URL         |
 
 ## Persistence and storage choice
 
@@ -77,3 +96,4 @@ Deploy the server (Node) and static client to any host (e.g. Railway, Render, Fl
 - `POST /api/games/:gameId/placements` — body: `{ "player", "placements" }` → `{ "ok": true }`
 - `POST /api/games/:gameId/fire` — body: `{ "player", "row", "col" }` → `{ "hit", "sunkShipName?", "gameOver?", "state" }`
 - `GET /api/history` — list completed games (moves, outcome, timestamps)
+

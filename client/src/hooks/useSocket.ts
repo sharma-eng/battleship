@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import type { GameMode } from '@shared/types';
-
-// In dev, connect directly to the backend so WebSocket isn't broken by the Vite proxy
-const SOCKET_URL = import.meta.env.DEV ? 'http://localhost:3001' : '';
+import { SOCKET_URL } from '../config';
 
 export function useSocket(gameId: string, mode: GameMode): ReturnType<typeof io> | null {
   const [socket, setSocket] = useState<ReturnType<typeof io> | null>(null);
