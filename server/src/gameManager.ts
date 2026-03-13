@@ -107,6 +107,20 @@ function validatePlacements(placements: ShipPlacement[]): boolean {
   return true;
 }
 
+/** Normalize placement from request body (row/col may be strings from JSON). */
+function normalizePlacements(placements: unknown[]): ShipPlacement[] {
+  return placements.map((p: unknown) => {
+    const x = p as Record<string, unknown>;
+    const orientation = x.orientation === 'vertical' ? 'vertical' : 'horizontal';
+    return {
+      shipId: x.shipId as ShipPlacement['shipId'],
+      row: Number(x.row),
+      col: Number(x.col),
+      orientation,
+    };
+  });
+}
+
 export function submitPlacements(
   gameId: string,
   player: PlayerRole,
@@ -114,14 +128,15 @@ export function submitPlacements(
 ): GameState | null {
   const state = games[gameId];
   if (!state || state.phase !== 'placement') return null;
-  if (!validatePlacements(placements)) return null;
-  if (player === 'player2' && state.mode === 'multiplayer' && !state.player1Board) return null;
+  const normalized = normalizePlacements(placements);
+  if (!validatePlacements(normalized)) return null;
+  // Allow either player to place in any order; no need for player1 to place first
   if (player === 'player1') {
-    state.player1ShipsPlaced = placements as GameState['player1ShipsPlaced'];
-    state.player1Board = applyPlacementsToBoard(placements);
+    state.player1ShipsPlaced = normalized as GameState['player1ShipsPlaced'];
+    state.player1Board = applyPlacementsToBoard(normalized);
   } else {
-    state.player2ShipsPlaced = placements as GameState['player2ShipsPlaced'];
-    state.player2Board = applyPlacementsToBoard(placements);
+    state.player2ShipsPlaced = normalized as GameState['player2ShipsPlaced'];
+    state.player2Board = applyPlacementsToBoard(normalized);
   }
   state.updatedAt = Date.now();
 

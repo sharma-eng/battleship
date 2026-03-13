@@ -75,7 +75,9 @@ export function PlacementPhase({ gameId, mode, playerRole, state, onPlacementsDo
           </button>
           <h1 className="placement__title">Waiting for opponent</h1>
           <p className="placement__waiting">
-            You have placed all ships. Share Game ID <strong>{gameId}</strong> so the other player can join and place their ships.
+            {playerRole === 'player1'
+              ? <>You have placed all ships. Share Game ID <strong>{gameId}</strong> so the other player can join and place their ships.</>
+              : <>You have placed all ships. Waiting for the other player to place theirs.</>}
           </p>
         </header>
         <div className="placement__content">
