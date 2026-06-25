@@ -1,2 +1,4 @@
 anthropic>=0.70.0
 python-dotenv>=1.0.0
+# Web-browsing plugin (optional). After installing, run:  playwright install chromium
+playwright>=1.40.0

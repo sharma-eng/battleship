@@ -6,12 +6,12 @@ from typing import Callable
 
 from anthropic import Anthropic
 
-from .tools import CONFIRM_TOOLS, TOOLS, dispatch_tool
+from .plugins import BROWSER_AVAILABLE, CONFIRM_TOOLS, TOOLS, dispatch_tool
 
 MODEL = "claude-opus-4-8"
 MAX_TOKENS = 16000
 
-SYSTEM_PROMPT = """You are Hermes, a helpful AI agent running on the user's computer.
+_BASE_PROMPT = """You are Hermes, a helpful AI agent running on the user's computer.
 
 You have tools to list directories, read files, write files, and run shell
 commands in the current working directory. Use them when they help you carry out
@@ -22,6 +22,15 @@ pick a reasonable option and note it rather than asking. For destructive actions
 (deleting files, overwriting important data), confirm first.
 
 Be concise. When a task is done, lead with the outcome in a sentence or two."""
+
+_BROWSER_PROMPT = """
+
+You can also browse the web. Use browser_navigate to open a page, browser_read to
+re-read the current page, and browser_click / browser_type to interact with it.
+Selectors may be CSS (e.g. "input[name='q']") or Playwright text selectors
+(e.g. "text=Sign in"). Read a page before acting so you target the right elements."""
+
+SYSTEM_PROMPT = _BASE_PROMPT + (_BROWSER_PROMPT if BROWSER_AVAILABLE else "")
 
 # Callback signatures (all optional):
 #   on_text(delta: str)            -> stream assistant text as it's generated

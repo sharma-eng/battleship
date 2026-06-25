@@ -10,7 +10,10 @@ This is the starter version — small and easy to read so you can extend it.
 
 Hermes runs a standard agentic tool loop: it calls the model, the model decides
 whether to use a tool, Hermes runs the tool and feeds the result back, and the
-loop repeats until the model has a final answer. The built-in tools are:
+loop repeats until the model has a final answer.
+
+Tools are organized as **plugins** (`hermes/tools.py` for files/shell,
+`hermes/browser.py` for the web). The built-in tools:
 
 | Tool | What it does | Confirmation |
 |------|--------------|--------------|
@@ -18,10 +21,15 @@ loop repeats until the model has a final answer. The built-in tools are:
 | `read_file` | Read a file's contents | — |
 | `write_file` | Create or overwrite a file | asks first |
 | `run_command` | Run a shell command and capture its output | asks first |
+| `browser_navigate` | Open a URL and read the page | — |
+| `browser_read` | Re-read the current page | — |
+| `browser_click` | Click an element | asks first |
+| `browser_type` | Type into a field (optionally submit) | asks first |
+| `browser_screenshot` | Save a full-page screenshot | — |
 
 Responses **stream live** as they're generated, tool calls are shown inline, and
-the two tools that change your system (`write_file`, `run_command`) prompt for
-**confirmation** before running.
+tools that change your system or act on a web page prompt for **confirmation**
+before running.
 
 ## Setup
 
@@ -43,6 +51,26 @@ export ANTHROPIC_API_KEY=sk-ant-...
 
 Get an API key from the [Anthropic Console](https://console.anthropic.com/).
 
+### Enable web browsing
+
+The browser plugin uses [Playwright](https://playwright.dev/python/) with
+Chromium. After `pip install -r requirements.txt`, download the browser once:
+
+```bash
+playwright install chromium
+```
+
+That's it — Hermes auto-detects Playwright and exposes the `browser_*` tools. If
+Playwright isn't installed, Hermes still runs with just the file/shell tools.
+
+Optional environment overrides:
+
+| Variable | Effect |
+|----------|--------|
+| `HERMES_BROWSER_HEADLESS=0` | Show the browser window instead of running headless |
+| `HERMES_BROWSER_EXECUTABLE` | Use a specific Chromium binary instead of Playwright's |
+| `HERMES_BROWSER_PROXY` | Route the browser through a proxy (e.g. `http://127.0.0.1:8080`) |
+
 ## Run it
 
 ```bash
@@ -56,6 +84,7 @@ you> what files are in this directory?
 you> read agent.py and explain what it does
 you> create a file notes.txt with three ideas for extending you
 you> run the tests and tell me if they pass
+you> go to news.ycombinator.com and tell me the top 3 story titles
 ```
 
 Type `exit` (or Ctrl-D) to quit.
@@ -89,12 +118,17 @@ scripts, but pass one (or run the REPL) when a human should approve changes.
 
 ```
 hermes/
-  agent.py     # the Hermes class + the tool-use loop
-  tools.py     # tool schemas and their Python handlers
+  agent.py     # the Hermes class + the streaming tool-use loop
+  plugins.py   # registry: combines plugins, dispatches tool calls
+  tools.py     # core plugin: file + shell tools
+  browser.py   # browser plugin: Playwright/Chromium web tools
   __main__.py  # the interactive REPL (python -m hermes)
 requirements.txt
 .env.example
 ```
+
+Adding a capability = writing a plugin module that exposes `TOOLS`,
+`HANDLERS`, and optional `CONFIRM_TOOLS`, then registering it in `plugins.py`.
 
 ## ⚠️ A note on safety
 
@@ -107,7 +141,7 @@ do anything you can, so run Hermes in a directory you're comfortable with
 
 ## Ideas for extending Hermes
 
-- Add more tools (web search, git operations, an HTTP fetch).
+- Add more tools/plugins (git operations, an HTTP fetch, web search).
+- Feed `browser_screenshot` images back to the model for visual page understanding.
 - Restrict file/command tools to an allowlisted working directory.
 - Persist conversations to disk so sessions resume.
-- Swap the manual loop for the SDK's `tool_runner` helper.

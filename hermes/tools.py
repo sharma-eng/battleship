@@ -1,7 +1,8 @@
-"""Tool definitions and their handlers for Hermes.
+"""Core file/shell plugin for Hermes.
 
-``TOOLS`` is the JSON-schema list sent to the API. ``dispatch_tool`` maps a
-tool name + input to the matching handler and returns ``(output, is_error)``.
+A plugin exposes three names that the registry in ``plugins.py`` collects:
+``TOOLS`` (JSON-schema list sent to the API), ``HANDLERS`` (name -> callable),
+and optionally ``CONFIRM_TOOLS`` (names that should be confirmed first).
 """
 
 from __future__ import annotations
@@ -108,20 +109,9 @@ def _run_command(command: str) -> str:
     return out.strip() or f"(no output, exit code {result.returncode})"
 
 
-_HANDLERS = {
+HANDLERS = {
     "list_files": _list_files,
     "read_file": _read_file,
     "write_file": _write_file,
     "run_command": _run_command,
 }
-
-
-def dispatch_tool(name: str, tool_input: dict) -> tuple[str, bool]:
-    """Execute a tool by name. Returns (output_text, is_error)."""
-    handler = _HANDLERS.get(name)
-    if handler is None:
-        return f"Unknown tool: {name}", True
-    try:
-        return handler(**tool_input), False
-    except Exception as exc:  # surface the failure to the model so it can adapt
-        return f"Error running {name}: {exc}", True

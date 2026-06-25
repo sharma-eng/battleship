@@ -10,6 +10,7 @@ except ImportError:
     pass
 
 from .agent import Hermes
+from .plugins import shutdown
 
 
 def _short(value: dict) -> str:
@@ -38,24 +39,27 @@ def confirm(name: str, tool_input: dict) -> bool:
 def main() -> None:
     print("Hermes agent. Type a message, or 'exit' / Ctrl-D to quit.\n")
     agent = Hermes(on_text=on_text, on_tool=on_tool, confirm=confirm)
-    while True:
-        try:
-            user_input = input("you> ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print("\nbye")
-            break
-        if not user_input:
-            continue
-        if user_input.lower() in {"exit", "quit"}:
-            print("bye")
-            break
-        print("\nhermes> ", end="", flush=True)
-        try:
-            agent.send(user_input)  # text streams live via on_text
-        except Exception as exc:  # keep the REPL alive on API/tool errors
-            print(f"\n[error] {exc}", file=sys.stderr)
-            continue
-        print("\n")
+    try:
+        while True:
+            try:
+                user_input = input("you> ").strip()
+            except (EOFError, KeyboardInterrupt):
+                print("\nbye")
+                break
+            if not user_input:
+                continue
+            if user_input.lower() in {"exit", "quit"}:
+                print("bye")
+                break
+            print("\nhermes> ", end="", flush=True)
+            try:
+                agent.send(user_input)  # text streams live via on_text
+            except Exception as exc:  # keep the REPL alive on API/tool errors
+                print(f"\n[error] {exc}", file=sys.stderr)
+                continue
+            print("\n")
+    finally:
+        shutdown()  # close the browser if the plugin started one
 
 
 if __name__ == "__main__":
