@@ -71,6 +71,11 @@ TOOLS = [
 ]
 
 
+# Tools that change the filesystem or run arbitrary code. A frontend can gate
+# these behind a confirmation prompt (see Hermes(confirm=...)).
+CONFIRM_TOOLS = {"write_file", "run_command"}
+
+
 def _list_files(path: str = ".") -> str:
     p = Path(path)
     if not p.exists():

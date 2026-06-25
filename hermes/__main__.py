@@ -12,9 +12,32 @@ except ImportError:
 from .agent import Hermes
 
 
+def _short(value: dict) -> str:
+    """One-line preview of a tool's input for display."""
+    text = ", ".join(f"{k}={v!r}" for k, v in value.items())
+    return text if len(text) <= 80 else text[:77] + "..."
+
+
+def on_text(delta: str) -> None:
+    print(delta, end="", flush=True)
+
+
+def on_tool(name: str, tool_input: dict) -> None:
+    print(f"\n  ⚙ {name}({_short(tool_input)})", flush=True)
+
+
+def confirm(name: str, tool_input: dict) -> bool:
+    print(f"\n  ⚠ Hermes wants to run {name}({_short(tool_input)})")
+    try:
+        answer = input("    allow? [y/N] ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        return False
+    return answer in {"y", "yes"}
+
+
 def main() -> None:
     print("Hermes agent. Type a message, or 'exit' / Ctrl-D to quit.\n")
-    agent = Hermes()
+    agent = Hermes(on_text=on_text, on_tool=on_tool, confirm=confirm)
     while True:
         try:
             user_input = input("you> ").strip()
@@ -26,12 +49,13 @@ def main() -> None:
         if user_input.lower() in {"exit", "quit"}:
             print("bye")
             break
+        print("\nhermes> ", end="", flush=True)
         try:
-            reply = agent.send(user_input)
+            agent.send(user_input)  # text streams live via on_text
         except Exception as exc:  # keep the REPL alive on API/tool errors
-            print(f"[error] {exc}", file=sys.stderr)
+            print(f"\n[error] {exc}", file=sys.stderr)
             continue
-        print(f"\nhermes> {reply}\n")
+        print("\n")
 
 
 if __name__ == "__main__":
