@@ -71,6 +71,14 @@ Optional environment overrides:
 | `HERMES_BROWSER_EXECUTABLE` | Use a specific Chromium binary instead of Playwright's |
 | `HERMES_BROWSER_PROXY` | Route the browser through a proxy (e.g. `http://127.0.0.1:8080`) |
 
+## Check your setup
+
+Verify everything (SDK, API key, and that the browser launches) before running:
+
+```bash
+python -m hermes.doctor
+```
+
 ## Run it
 
 ```bash
