@@ -8,7 +8,9 @@ registering it here.
 from __future__ import annotations
 
 import importlib.util
+import os
 
+from . import fetch as _fetch_plugin
 from . import tools as _core
 
 TOOLS: list[dict] = []
@@ -18,11 +20,20 @@ _HANDLERS: dict = {}
 
 def _register(module) -> None:
     TOOLS.extend(module.TOOLS)
-    _HANDLERS.update(module.HANDLERS)
+    _HANDLERS.update(getattr(module, "HANDLERS", {}))
     CONFIRM_TOOLS.update(getattr(module, "CONFIRM_TOOLS", set()))
 
 
 _register(_core)
+_register(_fetch_plugin)  # http_fetch — stdlib only, always available
+
+# Web search uses Claude's server-side tool. On by default; set HERMES_WEB_SEARCH=0
+# to disable it for accounts that don't have web search enabled.
+WEB_SEARCH_ENABLED = os.environ.get("HERMES_WEB_SEARCH", "1") != "0"
+if WEB_SEARCH_ENABLED:
+    from . import search as _search
+
+    _register(_search)
 
 # The browser plugin needs Playwright. Enable it only if the package is present
 # so Hermes still runs (without web tools) when Playwright isn't installed.

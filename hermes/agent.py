@@ -6,7 +6,13 @@ from typing import Callable
 
 from anthropic import Anthropic
 
-from .plugins import BROWSER_AVAILABLE, CONFIRM_TOOLS, TOOLS, dispatch_tool
+from .plugins import (
+    BROWSER_AVAILABLE,
+    CONFIRM_TOOLS,
+    TOOLS,
+    WEB_SEARCH_ENABLED,
+    dispatch_tool,
+)
 
 MODEL = "claude-opus-4-8"
 MAX_TOKENS = 16000
@@ -23,14 +29,26 @@ pick a reasonable option and note it rather than asking. For destructive actions
 
 Be concise. When a task is done, lead with the outcome in a sentence or two."""
 
+_FETCH_PROMPT = """
+
+Use http_fetch to quickly GET a URL (pages, docs, JSON APIs) without a browser —
+prefer it when a page doesn't need rendering."""
+
+_SEARCH_PROMPT = """ Use web_search to find pages when you don't already have a URL."""
+
 _BROWSER_PROMPT = """
 
-You can also browse the web. Use browser_navigate to open a page, browser_read to
-re-read the current page, and browser_click / browser_type to interact with it.
-Selectors may be CSS (e.g. "input[name='q']") or Playwright text selectors
-(e.g. "text=Sign in"). Read a page before acting so you target the right elements."""
+For interactive or JavaScript-heavy sites, use the browser: browser_navigate to
+open a page, browser_read to re-read it, and browser_click / browser_type to
+interact. Selectors may be CSS (e.g. "input[name='q']") or Playwright text
+selectors (e.g. "text=Sign in"). Read a page before acting on it."""
 
-SYSTEM_PROMPT = _BASE_PROMPT + (_BROWSER_PROMPT if BROWSER_AVAILABLE else "")
+SYSTEM_PROMPT = (
+    _BASE_PROMPT
+    + _FETCH_PROMPT
+    + (_SEARCH_PROMPT if WEB_SEARCH_ENABLED else "")
+    + (_BROWSER_PROMPT if BROWSER_AVAILABLE else "")
+)
 
 # Callback signatures (all optional):
 #   on_text(delta: str)            -> stream assistant text as it's generated

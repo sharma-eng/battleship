@@ -12,8 +12,8 @@ Hermes runs a standard agentic tool loop: it calls the model, the model decides
 whether to use a tool, Hermes runs the tool and feeds the result back, and the
 loop repeats until the model has a final answer.
 
-Tools are organized as **plugins** (`hermes/tools.py` for files/shell,
-`hermes/browser.py` for the web). The built-in tools:
+Tools are organized as **plugins** (files/shell, web search, HTTP fetch, and a
+full browser). The built-in tools:
 
 | Tool | What it does | Confirmation |
 |------|--------------|--------------|
@@ -21,6 +21,8 @@ Tools are organized as **plugins** (`hermes/tools.py` for files/shell,
 | `read_file` | Read a file's contents | — |
 | `write_file` | Create or overwrite a file | asks first |
 | `run_command` | Run a shell command and capture its output | asks first |
+| `web_search` | Search the web (Claude's server-side search) | — |
+| `http_fetch` | GET a URL (page/JSON) without a browser | — |
 | `browser_navigate` | Open a URL and read the page | — |
 | `browser_read` | Re-read the current page | — |
 | `browser_click` | Click an element | asks first |
@@ -67,9 +69,14 @@ Optional environment overrides:
 
 | Variable | Effect |
 |----------|--------|
+| `HERMES_WEB_SEARCH=0` | Disable the `web_search` tool (for accounts without web search enabled) |
 | `HERMES_BROWSER_HEADLESS=0` | Show the browser window instead of running headless |
 | `HERMES_BROWSER_EXECUTABLE` | Use a specific Chromium binary instead of Playwright's |
 | `HERMES_BROWSER_PROXY` | Route the browser through a proxy (e.g. `http://127.0.0.1:8080`) |
+
+`web_search` uses Claude's **server-side** web search — no third-party API key is
+needed, but your Anthropic account must have web search enabled. `http_fetch` and
+the browser tools need no extra account features.
 
 ## Check your setup
 
@@ -129,7 +136,10 @@ hermes/
   agent.py     # the Hermes class + the streaming tool-use loop
   plugins.py   # registry: combines plugins, dispatches tool calls
   tools.py     # core plugin: file + shell tools
+  fetch.py     # http_fetch plugin (stdlib GET)
+  search.py    # web_search plugin (Claude server-side search)
   browser.py   # browser plugin: Playwright/Chromium web tools
+  doctor.py    # preflight readiness check (python -m hermes.doctor)
   __main__.py  # the interactive REPL (python -m hermes)
 requirements.txt
 .env.example
@@ -149,7 +159,8 @@ do anything you can, so run Hermes in a directory you're comfortable with
 
 ## Ideas for extending Hermes
 
-- Add more tools/plugins (git operations, an HTTP fetch, web search).
+- Add an `edit_file` (find-and-replace) tool for surgical code changes.
+- Add a `memory` plugin so Hermes remembers across sessions.
 - Feed `browser_screenshot` images back to the model for visual page understanding.
 - Restrict file/command tools to an allowlisted working directory.
 - Persist conversations to disk so sessions resume.
