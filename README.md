@@ -104,6 +104,15 @@ you> go to news.ycombinator.com and tell me the top 3 story titles
 
 Type `exit` (or Ctrl-D) to quit.
 
+## Tests
+
+The agent loop (tool calls, streaming, confirmation gate, refusal handling) is
+covered by an offline test that mocks the model — no API key needed:
+
+```bash
+python tests/test_agent_offline.py      # or: pytest tests/
+```
+
 ## Use it from Python
 
 ```python
